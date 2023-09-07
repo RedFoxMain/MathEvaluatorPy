@@ -23,7 +23,7 @@ def get_bracket(text):
         result += text[ind]
         ind2 = ind
         ind -= 1
-    return result, ind1, ind2-1
+    return result[::-1], ind1, ind2-1
 
 
 # method for math stuf
@@ -58,8 +58,9 @@ def parse(expr):
     
     have_brackets = False
     if not re.search(r"\(.*?\)", expr):
-        nums = re.findall(r"-?\d+\.[0-9]+|-?\d+", expr)
         opers = re.findall(r"[+*\/]",expr)
+        nums = re.split(r"[+*\/]",expr)
+        
     else:
         have_brackets = True
     
@@ -109,7 +110,9 @@ def parse(expr):
                 part = get_bracket(expr)
                 
                 exp = expr[:part[2]] + parse(part[0]) + expr[part[1]:]
-                nums.append(parse(exp))
+                res = parse(exp)
+                nums.insert(part[2],res)
+                
                 have_brackets = False
 
     if DEBUG_MODE:
@@ -120,5 +123,5 @@ def parse(expr):
         return nums[0]
 
 
-expr = "((((1+1)+1)+1)+1)*0"
+expr = "(((1+1)+1)+1)+1*0+(0*(2/0.4))"
 print(f"EXPR: {expr}\nFINAL_RESULT: {parse(expr)}")
