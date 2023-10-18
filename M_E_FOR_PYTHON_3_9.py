@@ -1,17 +1,16 @@
 import re
+import time
 
-# debug mode True/False
-DEBUG_MODE = False
+brackets_pat = re.compile("\(.*?\)")
+opers_pat = re.compile("[+*\/]")
 
 # operator priority
-def get_priority(oper):
-    priority = {
+priority = {
         "+": 1,
         "-": 1,
         "*": 2,
-        "/": 2}
-
-    return priority[oper]
+        "/": 2
+}
 
 # get expression from bracket
 def get_bracket(text):
@@ -28,26 +27,23 @@ def get_bracket(text):
 
 # method for math stuf
 def compute(num1, num2, oper):
-    num1 = float(num1)
-    num2 = float(num2)
     if oper == "+":
-        return num1 + num2
-    if oper == "-":
-        return num1 - num2
-    if oper == "*":
-        return num1 * num2
-    if oper == "/":
+        return float(num1) + float(num2)
+    elif oper == "-":
+        return float(num1) - float(num2)
+    elif oper == "*":
+        return float(num1) * float(num2)
+    elif oper == "/":
         try:
-            return num1 / num2
+            return float(num1) / float(num2)
         except ZeroDivisionError:
-            print(f"Нельзя делить {num1} на {num2}")
+            return "∞"
     return None
 
 # main method 
-def parse(expr):
+def evaluate(expr):
     # if expr is empty return None and print message
     if not expr:
-        print("Пустое выражение!")
         return None
     
     # gather numbers like 5 or -5 or 78 etc.
@@ -57,51 +53,33 @@ def parse(expr):
     opers = []
     
     have_brackets = False
-    if not re.search(r"\(.*?\)", expr):
-        opers = re.findall(r"[+*\/]",expr)
-        nums = re.split(r"[+*\/]",expr)
-        
+    if not re.search(brackets_pat, expr):
+        opers = re.findall(opers_pat, expr)
+        nums = re.split(opers_pat, expr)
     else:
         have_brackets = True
-    
+        
     # if we have - before number we need to put + before -
     for ind, elem in enumerate(nums):
-        if "(" not in elem and ")" not in elem:
-            if float(elem) < 0:
-                if ind != 0:
-                    opers.insert(ind - 1, "+")
-
-    if DEBUG_MODE:
-        print("BEGIN_NUMS: ", nums)
-        print("BEGIN_OPERS: ", opers)
+        if "(" and ")" not in elem and float(elem) < 0 and ind > 0:
+            opers.insert(ind - 1, "+")
     
-    
-    while (len(nums) > 1 and len(opers) > 0) or have_brackets:
+    while len(nums) > 1 and len(opers) > 0 or have_brackets:
         try:
             if have_brackets:
                 raise IndexError
-                
+            
             # get priority
             priority_index = 0
             max_priority = 0
             
             for ind, el in enumerate(opers):
-                if get_priority(el) > max_priority:
-                    max_priority = get_priority(el)
+                if priority[el] > max_priority:
+                    max_priority = priority[el]
                     priority_index = ind
             
-            
-            num1 = nums.pop(priority_index)
-            num2 = nums.pop(priority_index)
-            oper = opers.pop(priority_index)
-            
-            if DEBUG_MODE:
-                print("N1: ", num1)
-                print("N2: ", num2)
-                print("OP: ", oper)
-            
             # insert result into nums
-            result = compute(num1, num2, oper)
+            result = compute(nums.pop(priority_index), nums.pop(priority_index), opers.pop(priority_index))
             
             nums.insert(priority_index, str(result))
 
@@ -109,19 +87,22 @@ def parse(expr):
             if "(" and ")" in expr:
                 part = get_bracket(expr)
                 
-                exp = expr[:part[2]] + parse(part[0]) + expr[part[1]:]
-                res = parse(exp)
-                nums.insert(part[2],res)
+                left = part[2]
+                mid = part[0]
+                right = part[1]
+                exp = expr[:left] + evaluate(mid) + expr[right:]
+                nums.insert(left, evaluate(exp))
                 
                 have_brackets = False
 
-    if DEBUG_MODE:
-        print("END_NUMS: ", nums)
-        print("END_OPERS: ", opers)
-    
     if nums:
-        return nums[0]
+        return nums.pop(0)
 
+# example
 
-expr = "(((1+1)+1)+1)+1*0+(0*(2/0.4))"
-print(f"EXPR: {expr}\nFINAL_RESULT: {parse(expr)}")
+expr = "((((1+1)+1)+1)+1)*0+5*(2+3)"
+
+t1 = time.perf_counter()
+res = evaluate(expr)
+t2 = time.perf_counter()
+print(f"EXPR: {expr}\nFINAL_RESULT: {res}\nEnd in {t2-t1:.4f}")
